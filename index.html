@@ -106,19 +106,21 @@
 
             let isScanning = false;
 
-            // Check if running on PS4
-            const isPS4 = navigator.userAgent.includes('PS4');
+            // Улучшенная проверка на PS4
+            const ua = navigator.userAgent;
+            const isPS4 = /ps4|playstation|sce|sony/i.test(ua);
 
-            // If not on PS4, block access
+            // Если не PS4 — блокируем
             if (!isPS4) {
                 log.innerHTML = '[DENIED] You are not on PS4. Access denied.\n';
                 scanBtn.disabled = true;
                 status.textContent = 'Access denied.';
-                // Also disable further interaction
+                // Дополнительно покажем User-Agent для диагностики
+                log.innerHTML += '[DEBUG] Your User-Agent: ' + ua + '\n';
                 return;
             }
 
-            // Real vulnerability database (no zero-day)
+            // Реальная база уязвимостей (без нулевого дня)
             const vulnerabilities = [
                 { name: 'Lapse', cve: 'CVE-2024-12345', min: 7.00, max: 13.04, type: 'Userland' },
                 { name: 'Poopsploit', cve: 'N/A', min: 7.00, max: 13.00, type: 'Kernel' },
@@ -134,7 +136,6 @@
 
             function getPS4Version() {
                 try {
-                    const ua = navigator.userAgent;
                     const match = ua.match(/PS4\/(\d+\.\d+)/);
                     return match ? parseFloat(match[1]) : null;
                 } catch (e) {
@@ -175,7 +176,6 @@
                 addLog('[INFO] Starting PS4 vulnerability scan.');
                 addLog('------------------------------------------------------------------');
 
-                // Version output with random RGB
                 const versionMsg = `PS4 VERSION - ${versionDisplay}`;
                 const spanVer = document.createElement('span');
                 spanVer.style.color = randomRGB();
@@ -236,7 +236,7 @@
 
             scanBtn.addEventListener('click', startScan);
 
-            // Initial state
+            // Начальное состояние
             addLog('[INFO] PS4 detected. Ready to scan.');
             status.textContent = 'Press SCAN to check vulnerabilities.';
         })();
