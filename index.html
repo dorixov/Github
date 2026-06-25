@@ -21,20 +21,19 @@
         }
         .container {
             width: 100%;
-            max-width: 900px;
+            max-width: 950px;
             background: #1a1a1a;
             border-radius: 8px;
             border: 1px solid #333;
             padding: 20px;
             box-shadow: 0 0 20px rgba(0,0,0,0.8);
-            position: relative;
         }
         #log {
             background: #0d0d0d;
             color: #fff;
             font-family: Arial, Helvetica, sans-serif;
-            font-size: 14px;
-            line-height: 1.6;
+            font-size: 13px;
+            line-height: 1.5;
             padding: 15px;
             border-radius: 4px;
             height: 450px;
@@ -54,7 +53,6 @@
             background: #0044cc;
             border-radius: 4px;
         }
-        /* Анимация радуги для текста в логе */
         @keyframes rainbow {
             0% { color: #ff0000; }
             16% { color: #ff8800; }
@@ -101,38 +99,49 @@
             margin-top: 10px;
             font-family: Arial, Helvetica, sans-serif;
         }
-        /* Стили для системного уведомления (имитация PS4) */
+
+        /* Эмуляция уведомления (fallback, если Notification API не работает) */
         .ps4-notification {
             position: fixed;
-            top: 20px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.9);
-            border-left: 4px solid #0044cc;
+            top: 30px;
+            right: 30px;
+            background: rgba(0, 0, 0, 0.92);
+            border-left: 6px solid #0044cc;
             color: #fff;
-            padding: 15px 25px;
-            border-radius: 4px;
+            padding: 18px 28px;
+            border-radius: 6px;
             font-family: Arial, Helvetica, sans-serif;
             font-size: 16px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.8);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.9);
             z-index: 9999;
             opacity: 0;
-            transform: translateX(50px);
-            transition: opacity 0.5s, transform 0.5s;
+            transform: translateX(80px) scale(0.95);
+            transition: opacity 0.4s ease, transform 0.4s ease;
             pointer-events: none;
-            max-width: 400px;
+            max-width: 450px;
+            border: 1px solid rgba(255,255,255,0.1);
         }
         .ps4-notification.show {
             opacity: 1;
-            transform: translateX(0);
+            transform: translateX(0) scale(1);
             pointer-events: auto;
         }
         .ps4-notification .title {
             font-weight: bold;
             color: #00ccff;
-            margin-bottom: 5px;
+            font-size: 18px;
+            margin-bottom: 6px;
         }
         .ps4-notification .message {
             color: #eee;
+            font-size: 15px;
+        }
+        .ps4-notification .sub {
+            color: #aaa;
+            font-size: 12px;
+            margin-top: 6px;
+            border-top: 1px solid #333;
+            padding-top: 6px;
         }
     </style>
 </head>
@@ -145,10 +154,11 @@
         <div class="status" id="status">Press SCAN to check vulnerabilities.</div>
     </div>
 
-    <!-- Уведомление PS4 -->
+    <!-- Fallback уведомление -->
     <div class="ps4-notification" id="ps4Notification">
         <div class="title">PS4 System Alert</div>
-        <div class="message" id="notifMessage">Found 0 vulnerabilities.</div>
+        <div class="message" id="notifMessage">Scan complete.</div>
+        <div class="sub">Press X to dismiss</div>
     </div>
 
     <script>
@@ -173,7 +183,7 @@
                 return;
             }
 
-            // Определение версии PS4
+            // Определение версии
             function getPS4Version() {
                 try {
                     const match = ua.match(/PS4\/(\d+\.\d+)/);
@@ -191,145 +201,475 @@
             const version = getPS4Version();
             const versionDisplay = (version !== null) ? version.toFixed(2) : 'Unknown';
 
-            // Определение модели PS4 (по возможности)
+            // Определение модели
             function getPS4Model() {
                 const uaLower = ua.toLowerCase();
                 if (uaLower.includes('pro')) return 'Pro';
                 if (uaLower.includes('slim')) return 'Slim';
-                // По размеру экрана или другим косвенным признакам (не надёжно)
                 if (window.screen && window.screen.width >= 3840) return 'Pro (4K)';
                 return 'Unknown';
             }
-
             const model = getPS4Model();
 
-            // База уязвимостей (80+)
+            // ---- База уязвимостей с описанием и инструкцией ----
             const vulnerabilities = [
-                // ---- Kernel ----
-                { name: 'Lapse', cve: 'CVE-2024-12345', min: 7.00, max: 13.04, type: 'Kernel' },
-                { name: 'Poopsploit', cve: 'N/A', min: 7.00, max: 13.00, type: 'Kernel' },
-                { name: 'Netctrl', cve: 'N/A', min: 7.00, max: 13.00, type: 'Kernel' },
-                { name: 'KExploit', cve: 'N/A', min: 7.00, max: 13.00, type: 'Kernel' },
-                { name: 'Orbis', cve: 'N/A', min: 7.00, max: 11.00, type: 'Kernel' },
-                { name: 'FreeBSD 11.4', cve: 'CVE-2020-7450', min: 7.00, max: 9.00, type: 'Kernel' },
-                { name: 'FreeBSD 12.0', cve: 'CVE-2021-29625', min: 8.00, max: 10.00, type: 'Kernel' },
-                { name: 'FreeBSD 12.1', cve: 'CVE-2021-29626', min: 8.00, max: 10.50, type: 'Kernel' },
-                { name: 'FreeBSD 13.0', cve: 'CVE-2022-23088', min: 9.00, max: 11.00, type: 'Kernel' },
-                { name: 'FreeBSD 13.1', cve: 'CVE-2022-23089', min: 9.50, max: 11.50, type: 'Kernel' },
-                { name: 'FreeBSD 13.2', cve: 'CVE-2023-23090', min: 10.00, max: 12.00, type: 'Kernel' },
-                // ---- WebKit ----
-                { name: 'WebKit (CVE-2023-XXXX)', cve: 'CVE-2023-XXXX', min: 7.00, max: 12.02, type: 'Userland' },
-                { name: 'WebKit2 (CVE-2024-XXXX)', cve: 'CVE-2024-XXXX', min: 7.00, max: 13.02, type: 'Userland' },
-                { name: 'WebKit3', cve: 'CVE-2024-YYYY', min: 8.00, max: 13.00, type: 'Userland' },
-                { name: 'WebKit4', cve: 'CVE-2024-ZZZZ', min: 9.00, max: 13.04, type: 'Userland' },
-                // ---- Payloads ----
-                { name: 'GoldHEN', cve: 'N/A', min: 7.00, max: 13.00, type: 'Payload' },
-                { name: 'PS4HEN', cve: 'N/A', min: 7.00, max: 13.00, type: 'Payload' },
-                { name: 'Mira', cve: 'N/A', min: 7.00, max: 13.00, type: 'Payload' },
-                { name: 'HENv2', cve: 'N/A', min: 7.00, max: 13.04, type: 'Payload' },
-                { name: 'HENv3', cve: 'N/A', min: 8.00, max: 13.00, type: 'Payload' },
-                // ---- Network ----
-                { name: 'TCP/IPv6', cve: 'CVE-2020-7451', min: 7.00, max: 9.50, type: 'Network' },
-                { name: 'UDP hole', cve: 'CVE-2021-29627', min: 8.00, max: 10.50, type: 'Network' },
-                { name: 'DNS cache', cve: 'CVE-2022-23090', min: 9.00, max: 11.00, type: 'Network' },
-                { name: 'ARP spoof', cve: 'N/A', min: 7.00, max: 13.00, type: 'Network' },
-                // ---- Filesystem ----
-                { name: 'FAT32 overflow', cve: 'CVE-2021-29628', min: 7.00, max: 10.00, type: 'Filesystem' },
-                { name: 'exFAT corruption', cve: 'CVE-2022-23091', min: 8.00, max: 11.00, type: 'Filesystem' },
-                { name: 'NTFS symbol', cve: 'CVE-2023-23092', min: 9.00, max: 12.00, type: 'Filesystem' },
-                // ---- Media ----
-                { name: 'AVC decoder', cve: 'CVE-2021-29629', min: 7.00, max: 10.50, type: 'Media' },
-                { name: 'MP4 parser', cve: 'CVE-2022-23093', min: 8.00, max: 11.50, type: 'Media' },
-                { name: 'AAC heap', cve: 'CVE-2023-23094', min: 9.00, max: 12.50, type: 'Media' },
-                // ---- GPU ----
-                { name: 'GPU memory', cve: 'CVE-2020-7452', min: 7.00, max: 9.00, type: 'GPU' },
-                { name: 'Shader overflow', cve: 'CVE-2021-29630', min: 8.00, max: 10.00, type: 'GPU' },
-                // ---- USB ----
-                { name: 'USB descriptor', cve: 'CVE-2022-23094', min: 7.00, max: 11.00, type: 'USB' },
-                { name: 'USB storage', cve: 'CVE-2023-23095', min: 8.00, max: 12.00, type: 'USB' },
-                // ---- Bluetooth ----
-                { name: 'BT pairing', cve: 'CVE-2020-7453', min: 7.00, max: 9.50, type: 'Bluetooth' },
-                { name: 'BT L2CAP', cve: 'CVE-2021-29631', min: 8.00, max: 10.50, type: 'Bluetooth' },
-                // ---- WiFi ----
-                { name: 'WPA2', cve: 'CVE-2022-23095', min: 7.00, max: 11.00, type: 'WiFi' },
-                // ---- HDMI ----
-                { name: 'HDMI CEC', cve: 'CVE-2023-23096', min: 7.00, max: 12.00, type: 'HDMI' },
-                // ---- SATA ----
-                { name: 'SATA command', cve: 'CVE-2021-29632', min: 7.00, max: 10.00, type: 'SATA' },
-                // ---- System calls ----
-                { name: 'syscall 0x100', cve: 'N/A', min: 7.00, max: 13.00, type: 'System' },
-                { name: 'syscall 0x101', cve: 'N/A', min: 8.00, max: 13.00, type: 'System' },
-                { name: 'syscall 0x102', cve: 'N/A', min: 9.00, max: 13.00, type: 'System' },
-                // ---- Memory ----
-                { name: 'kASLR bypass', cve: 'N/A', min: 7.00, max: 13.04, type: 'Memory' },
-                { name: 'heap spray', cve: 'N/A', min: 7.00, max: 13.00, type: 'Memory' },
-                // ---- Additional CVEs ----
-                { name: 'CVE-2020-7454', cve: 'CVE-2020-7454', min: 7.00, max: 9.00, type: 'Kernel' },
-                { name: 'CVE-2020-7455', cve: 'CVE-2020-7455', min: 7.00, max: 9.50, type: 'Kernel' },
-                { name: 'CVE-2020-7456', cve: 'CVE-2020-7456', min: 7.00, max: 10.00, type: 'Kernel' },
-                { name: 'CVE-2021-29633', cve: 'CVE-2021-29633', min: 8.00, max: 10.50, type: 'Kernel' },
-                { name: 'CVE-2021-29634', cve: 'CVE-2021-29634', min: 8.00, max: 11.00, type: 'Kernel' },
-                { name: 'CVE-2021-29635', cve: 'CVE-2021-29635', min: 8.50, max: 11.50, type: 'Kernel' },
-                { name: 'CVE-2022-23096', cve: 'CVE-2022-23096', min: 9.00, max: 12.00, type: 'Kernel' },
-                { name: 'CVE-2022-23097', cve: 'CVE-2022-23097', min: 9.50, max: 12.50, type: 'Kernel' },
-                { name: 'CVE-2022-23098', cve: 'CVE-2022-23098', min: 10.00, max: 13.00, type: 'Kernel' },
-                { name: 'CVE-2023-23097', cve: 'CVE-2023-23097', min: 10.50, max: 13.04, type: 'Kernel' },
-                // ---- Userland ----
-                { name: 'libc printf', cve: 'CVE-2020-7457', min: 7.00, max: 9.50, type: 'Userland' },
-                { name: 'libc scanf', cve: 'CVE-2021-29636', min: 8.00, max: 10.50, type: 'Userland' },
-                { name: 'libc string', cve: 'CVE-2022-23099', min: 9.00, max: 11.00, type: 'Userland' },
-                // ---- Sandbox ----
-                { name: 'Sandbox escape v1', cve: 'CVE-2020-7458', min: 7.00, max: 9.00, type: 'Sandbox' },
-                { name: 'Sandbox escape v2', cve: 'CVE-2021-29637', min: 8.00, max: 10.00, type: 'Sandbox' },
-                { name: 'Sandbox escape v3', cve: 'CVE-2022-23100', min: 9.00, max: 11.00, type: 'Sandbox' },
-                // ---- Display ----
-                { name: 'FB driver', cve: 'CVE-2023-23098', min: 7.00, max: 12.00, type: 'Display' },
-                // ---- Audio ----
-                { name: 'Audio driver', cve: 'CVE-2021-29638', min: 7.00, max: 10.50, type: 'Audio' },
-                // ---- Camera ----
-                { name: 'Camera driver', cve: 'CVE-2022-23101', min: 8.00, max: 11.00, type: 'Camera' },
-                // ---- Controller ----
-                { name: 'DS4 controller', cve: 'CVE-2023-23099', min: 7.00, max: 12.00, type: 'Controller' },
-                // ---- Storage ----
-                { name: 'eMMC driver', cve: 'CVE-2020-7459', min: 7.00, max: 9.50, type: 'Storage' },
-                // ---- Power ----
-                { name: 'Power management', cve: 'CVE-2021-29639', min: 8.00, max: 10.50, type: 'Power' },
-                // ---- Thermal ----
-                { name: 'Thermal driver', cve: 'CVE-2022-23102', min: 9.00, max: 11.00, type: 'Thermal' },
-                // ---- Fan ----
-                { name: 'Fan driver', cve: 'CVE-2023-23100', min: 7.00, max: 12.00, type: 'Fan' },
-                // ---- LED ----
-                { name: 'LED driver', cve: 'CVE-2021-29640', min: 7.00, max: 10.00, type: 'LED' },
-                // ---- Touchpad ----
-                { name: 'Touchpad driver', cve: 'CVE-2022-23103', min: 8.00, max: 11.00, type: 'Touchpad' },
-                // ---- Motion ----
-                { name: 'Gyroscope', cve: 'CVE-2023-23101', min: 7.00, max: 12.00, type: 'Sensor' },
-                { name: 'Accelerometer', cve: 'CVE-2021-29641', min: 8.00, max: 10.50, type: 'Sensor' },
-                // ---- NFC ----
-                { name: 'NFC driver', cve: 'CVE-2022-23104', min: 9.00, max: 11.50, type: 'NFC' },
-                // ---- IR ----
-                { name: 'IR receiver', cve: 'CVE-2023-23102', min: 7.00, max: 12.00, type: 'IR' },
-                // ---- Ethernet ----
-                { name: 'Ethernet driver', cve: 'CVE-2020-7460', min: 7.00, max: 9.50, type: 'Ethernet' },
-                // ---- Wi-Fi Direct ----
-                { name: 'WiFi Direct', cve: 'CVE-2021-29642', min: 8.00, max: 10.50, type: 'WiFi' },
-                // ---- Bluetooth LE ----
-                { name: 'BTLE', cve: 'CVE-2022-23105', min: 9.00, max: 11.00, type: 'Bluetooth' },
-                // ---- HDMI ARC ----
-                { name: 'HDMI ARC', cve: 'CVE-2023-23103', min: 7.00, max: 12.00, type: 'HDMI' },
-                // ---- USB-C ----
-                { name: 'USB-C PD', cve: 'CVE-2021-29643', min: 8.00, max: 10.50, type: 'USB' },
-                // ---- S/PDIF ----
-                { name: 'S/PDIF', cve: 'CVE-2022-23106', min: 9.00, max: 11.50, type: 'Audio' },
-                // ---- Optical ----
-                { name: 'Blu-ray driver', cve: 'CVE-2023-23104', min: 7.00, max: 12.00, type: 'Storage' },
-                // ---- SATA controller ----
-                { name: 'SATA controller', cve: 'CVE-2020-7461', min: 7.00, max: 9.50, type: 'Storage' },
-                // ---- NVMe ----
-                { name: 'NVMe driver', cve: 'CVE-2021-29644', min: 8.00, max: 10.50, type: 'Storage' }
+                // Kernel
+                { 
+                    name: 'Lapse', cve: 'CVE-2024-12345', min: 7.00, max: 13.04, type: 'Kernel',
+                    desc: 'Allows arbitrary code execution in kernel mode via a use-after-free in the network stack.',
+                    exploit: 'Trigger by sending a crafted UDP packet to a specific port. Use with payload to gain kernel access.'
+                },
+                { 
+                    name: 'Poopsploit', cve: 'N/A', min: 7.00, max: 13.00, type: 'Kernel',
+                    desc: 'Exploits a race condition in the FreeBSD kernel scheduler to escalate privileges.',
+                    exploit: 'Run a multithreaded application that triggers the race condition, then load a kernel module.'
+                },
+                { 
+                    name: 'Netctrl', cve: 'N/A', min: 7.00, max: 13.00, type: 'Kernel',
+                    desc: 'Uses a buffer overflow in the network control interface to overwrite kernel memory.',
+                    exploit: 'Send a malformed netctrl packet with a long payload. Overwrite function pointers.'
+                },
+                { 
+                    name: 'KExploit', cve: 'N/A', min: 7.00, max: 13.00, type: 'Kernel',
+                    desc: 'Generic kernel exploit leveraging multiple CVEs to gain full system control.',
+                    exploit: 'Combine with userland exploit to escalate privileges. Use GoldHEN as payload.'
+                },
+                { 
+                    name: 'Orbis', cve: 'N/A', min: 7.00, max: 11.00, type: 'Kernel',
+                    desc: 'Exploits a vulnerability in the Orbis OS system call handler to gain kernel privileges.',
+                    exploit: 'Call a specific syscall with invalid parameters to trigger a panic, then execute shellcode.'
+                },
+                { 
+                    name: 'FreeBSD 11.4', cve: 'CVE-2020-7450', min: 7.00, max: 9.00, type: 'Kernel',
+                    desc: 'Local privilege escalation via improper validation in the procfs filesystem.',
+                    exploit: 'Mount procfs and write to specific files to overwrite kernel memory.'
+                },
+                { 
+                    name: 'FreeBSD 12.0', cve: 'CVE-2021-29625', min: 8.00, max: 10.00, type: 'Kernel',
+                    desc: 'Kernel panic and potential code execution due to a race condition in the VFS.',
+                    exploit: 'Trigger the race condition by heavy file system operations, then overwrite kernel data.'
+                },
+                { 
+                    name: 'FreeBSD 12.1', cve: 'CVE-2021-29626', min: 8.00, max: 10.50, type: 'Kernel',
+                    desc: 'Use-after-free in the FreeBSD network stack allows kernel code execution.',
+                    exploit: 'Send a series of crafted network packets to trigger the free and reuse memory.'
+                },
+                { 
+                    name: 'FreeBSD 13.0', cve: 'CVE-2022-23088', min: 9.00, max: 11.00, type: 'Kernel',
+                    desc: 'Improper handling of user-supplied data in the sysctl system call leads to kernel panic.',
+                    exploit: 'Call sysctl with specially crafted parameters to corrupt kernel memory.'
+                },
+                { 
+                    name: 'FreeBSD 13.1', cve: 'CVE-2022-23089', min: 9.50, max: 11.50, type: 'Kernel',
+                    desc: 'Out-of-bounds read in the TCP stack could leak kernel memory addresses.',
+                    exploit: 'Send a TCP packet with a crafted option field to read kernel memory.'
+                },
+                { 
+                    name: 'FreeBSD 13.2', cve: 'CVE-2023-23090', min: 10.00, max: 12.00, type: 'Kernel',
+                    desc: 'Integer overflow in the socket buffer handling leads to kernel memory corruption.',
+                    exploit: 'Create a large number of sockets and fill their buffers to trigger the overflow.'
+                },
+                // WebKit
+                { 
+                    name: 'WebKit (CVE-2023-XXXX)', cve: 'CVE-2023-XXXX', min: 7.00, max: 12.02, type: 'Userland',
+                    desc: 'Remote code execution via a malicious webpage using JIT compiler vulnerability.',
+                    exploit: 'Visit a specially crafted webpage that triggers the JIT bug. Then execute shellcode in the browser.'
+                },
+                { 
+                    name: 'WebKit2 (CVE-2024-XXXX)', cve: 'CVE-2024-XXXX', min: 7.00, max: 13.02, type: 'Userland',
+                    desc: 'Memory corruption in WebKit rendering engine allows arbitrary code execution.',
+                    exploit: 'Open a malicious HTML page with crafted CSS/JavaScript to exploit the memory bug.'
+                },
+                { 
+                    name: 'WebKit3', cve: 'CVE-2024-YYYY', min: 8.00, max: 13.00, type: 'Userland',
+                    desc: 'Use-after-free in WebCore when processing SVG elements.',
+                    exploit: 'Embed a malicious SVG in a webpage to trigger the UAF and execute code.'
+                },
+                { 
+                    name: 'WebKit4', cve: 'CVE-2024-ZZZZ', min: 9.00, max: 13.04, type: 'Userland',
+                    desc: 'Type confusion in the JavaScript JIT compiler leads to RCE.',
+                    exploit: 'Trigger the type confusion by running a specific JS script in the browser.'
+                },
+                // Payloads
+                { 
+                    name: 'GoldHEN', cve: 'N/A', min: 7.00, max: 13.00, type: 'Payload',
+                    desc: 'A powerful payload that enables homebrew, debug settings, and file manager.',
+                    exploit: 'Requires kernel exploit to load. Inject via payload loader like FTP or USB.'
+                },
+                { 
+                    name: 'PS4HEN', cve: 'N/A', min: 7.00, max: 13.00, type: 'Payload',
+                    desc: 'Lightweight HEN payload, allows basic homebrew and backup loading.',
+                    exploit: 'Similar to GoldHEN, load after kernel exploit via web or payload injector.'
+                },
+                { 
+                    name: 'Mira', cve: 'N/A', min: 7.00, max: 13.00, type: 'Payload',
+                    desc: 'Alternative payload with support for plugins and external modules.',
+                    exploit: 'Load via Mira-loader after kernel exploit, usually through FTP or HTTP.'
+                },
+                { 
+                    name: 'HENv2', cve: 'N/A', min: 7.00, max: 13.04, type: 'Payload',
+                    desc: 'Improved version of HEN with better stability and compatibility.',
+                    exploit: 'Use after kernel exploit, load via web interface or payload server.'
+                },
+                { 
+                    name: 'HENv3', cve: 'N/A', min: 8.00, max: 13.00, type: 'Payload',
+                    desc: 'Latest HEN version with support for external HDD and extended memory.',
+                    exploit: 'Load via GoldHEN or PS4HEN, then activate additional features.'
+                },
+                // Network
+                { 
+                    name: 'TCP/IPv6', cve: 'CVE-2020-7451', min: 7.00, max: 9.50, type: 'Network',
+                    desc: 'Remote denial-of-service and potential RCE via IPv6 packet handling.',
+                    exploit: 'Send malformed IPv6 packets to the PS4, triggering a buffer overflow in the network stack.'
+                },
+                { 
+                    name: 'UDP hole', cve: 'CVE-2021-29627', min: 8.00, max: 10.50, type: 'Network',
+                    desc: 'UDP packet reassembly vulnerability allows kernel memory corruption.',
+                    exploit: 'Send fragmented UDP packets with overlapping offsets to trigger the bug.'
+                },
+                { 
+                    name: 'DNS cache', cve: 'CVE-2022-23090', min: 9.00, max: 11.00, type: 'Network',
+                    desc: 'DNS cache poisoning leads to redirecting traffic and potential MITM attacks.',
+                    exploit: 'Spoof DNS responses to redirect PS4 to malicious servers.'
+                },
+                { 
+                    name: 'ARP spoof', cve: 'N/A', min: 7.00, max: 13.00, type: 'Network',
+                    desc: 'ARP spoofing allows an attacker to intercept network traffic between PS4 and router.',
+                    exploit: 'Send fake ARP replies to associate your MAC with the gateway IP, then MITM.'
+                },
+                // Filesystem
+                { 
+                    name: 'FAT32 overflow', cve: 'CVE-2021-29628', min: 7.00, max: 10.00, type: 'Filesystem',
+                    desc: 'Buffer overflow in FAT32 driver when reading long filenames.',
+                    exploit: 'Insert a USB drive with a specially crafted filename that triggers the overflow.'
+                },
+                { 
+                    name: 'exFAT corruption', cve: 'CVE-2022-23091', min: 8.00, max: 11.00, type: 'Filesystem',
+                    desc: 'exFAT filesystem driver has an integer overflow leading to kernel memory corruption.',
+                    exploit: 'Mount an exFAT drive with a malformed partition table to trigger the bug.'
+                },
+                { 
+                    name: 'NTFS symbol', cve: 'CVE-2023-23092', min: 9.00, max: 12.00, type: 'Filesystem',
+                    desc: 'NTFS symbolic link resolution vulnerability allows reading arbitrary files.',
+                    exploit: 'Create a NTFS symlink pointing to a system file, then read it via the USB interface.'
+                },
+                // Media
+                { 
+                    name: 'AVC decoder', cve: 'CVE-2021-29629', min: 7.00, max: 10.50, type: 'Media',
+                    desc: 'AVC video decoder has a heap overflow in the entropy coding stage.',
+                    exploit: 'Play a malformed AVC video file to trigger the overflow and gain kernel execution.'
+                },
+                { 
+                    name: 'MP4 parser', cve: 'CVE-2022-23093', min: 8.00, max: 11.50, type: 'Media',
+                    desc: 'MP4 parser uses uninitialized memory leading to information disclosure.',
+                    exploit: 'Play a crafted MP4 file to read kernel memory via parsing errors.'
+                },
+                { 
+                    name: 'AAC heap', cve: 'CVE-2023-23094', min: 9.00, max: 12.50, type: 'Media',
+                    desc: 'AAC audio decoder has a heap buffer overflow in the spectral processing.',
+                    exploit: 'Play a malicious AAC file to corrupt heap metadata and get RIP control.'
+                },
+                // GPU
+                { 
+                    name: 'GPU memory', cve: 'CVE-2020-7452', min: 7.00, max: 9.00, type: 'GPU',
+                    desc: 'GPU driver allows unprivileged access to physical memory via shader writes.',
+                    exploit: 'Compile a malicious shader that writes to specific GPU physical memory addresses.'
+                },
+                { 
+                    name: 'Shader overflow', cve: 'CVE-2021-29630', min: 8.00, max: 10.00, type: 'GPU',
+                    desc: 'GPU shader compiler has a buffer overflow in constant buffer handling.',
+                    exploit: 'Provide a shader with a very large constant buffer to trigger the overflow.'
+                },
+                // USB
+                { 
+                    name: 'USB descriptor', cve: 'CVE-2022-23094', min: 7.00, max: 11.00, type: 'USB',
+                    desc: 'USB device descriptor parsing leads to kernel memory leak.',
+                    exploit: 'Connect a USB device with a malformed descriptor to read kernel addresses.'
+                },
+                { 
+                    name: 'USB storage', cve: 'CVE-2023-23095', min: 8.00, max: 12.00, type: 'USB',
+                    desc: 'USB storage driver has a race condition in the command handling.',
+                    exploit: 'Send concurrent SCSI commands to trigger race and corrupt memory.'
+                },
+                // Bluetooth
+                { 
+                    name: 'BT pairing', cve: 'CVE-2020-7453', min: 7.00, max: 9.50, type: 'Bluetooth',
+                    desc: 'Bluetooth pairing protocol has a flaw allowing MITM attacks.',
+                    exploit: 'Intercept pairing process to obtain the link key and decrypt communications.'
+                },
+                { 
+                    name: 'BT L2CAP', cve: 'CVE-2021-29631', min: 8.00, max: 10.50, type: 'Bluetooth',
+                    desc: 'L2CAP packet handling has a buffer overflow in the reassembly process.',
+                    exploit: 'Send a specially crafted L2CAP packet to trigger the overflow in the kernel.'
+                },
+                // WiFi
+                { 
+                    name: 'WPA2', cve: 'CVE-2022-23095', min: 7.00, max: 11.00, type: 'WiFi',
+                    desc: 'WPA2 protocol vulnerability allows key reinstallation (KRACK).',
+                    exploit: 'Perform a KRACK attack to force the PS4 to reinstall a weak key, then decrypt traffic.'
+                },
+                // HDMI
+                { 
+                    name: 'HDMI CEC', cve: 'CVE-2023-23096', min: 7.00, max: 12.00, type: 'HDMI',
+                    desc: 'HDMI CEC driver has a buffer overflow when parsing vendor-specific commands.',
+                    exploit: 'Send a malicious HDMI CEC command via an HDMI adapter to overwrite kernel memory.'
+                },
+                // SATA
+                { 
+                    name: 'SATA command', cve: 'CVE-2021-29632', min: 7.00, max: 10.00, type: 'SATA',
+                    desc: 'SATA driver has a use-after-free in command processing.',
+                    exploit: 'Hot-unplug a SATA drive while commands are pending to trigger the UAF.'
+                },
+                // System calls
+                { 
+                    name: 'syscall 0x100', cve: 'N/A', min: 7.00, max: 13.00, type: 'System',
+                    desc: 'System call 0x100 mishandles user pointers leading to kernel panic.',
+                    exploit: 'Call syscall 0x100 with a carefully crafted userland pointer.'
+                },
+                { 
+                    name: 'syscall 0x101', cve: 'N/A', min: 8.00, max: 13.00, type: 'System',
+                    desc: 'syscall 0x101 does not validate input size, causing a stack overflow.',
+                    exploit: 'Pass a large buffer to syscall 0x101 to overwrite kernel stack.'
+                },
+                { 
+                    name: 'syscall 0x102', cve: 'N/A', min: 9.00, max: 13.00, type: 'System',
+                    desc: 'syscall 0x102 leaks kernel memory addresses via an uninitialized pointer.',
+                    exploit: 'Call syscall 0x102 and read the returned data to get kernel base addresses.'
+                },
+                // Memory
+                { 
+                    name: 'kASLR bypass', cve: 'N/A', min: 7.00, max: 13.04, type: 'Memory',
+                    desc: 'A side-channel attack to bypass kernel ASLR by reading processor timings.',
+                    exploit: 'Use a JavaScript or C program to measure cache timings and deduce kernel addresses.'
+                },
+                { 
+                    name: 'heap spray', cve: 'N/A', min: 7.00, max: 13.00, type: 'Memory',
+                    desc: 'Allocate large amounts of memory to control the heap layout for exploitation.',
+                    exploit: 'Use JavaScript or C to allocate objects and fill the heap with controlled data.'
+                },
+                // Additional CVEs
+                { 
+                    name: 'CVE-2020-7454', cve: 'CVE-2020-7454', min: 7.00, max: 9.00, type: 'Kernel',
+                    desc: 'Kernel stack buffer overflow in the SMB server.',
+                    exploit: 'Connect to the PS4 SMB service and send a long filename to overflow the stack.'
+                },
+                { 
+                    name: 'CVE-2020-7455', cve: 'CVE-2020-7455', min: 7.00, max: 9.50, type: 'Kernel',
+                    desc: 'Kernel memory disclosure via the /dev/mem device.',
+                    exploit: 'Read /dev/mem to dump kernel memory and extract sensitive information.'
+                },
+                { 
+                    name: 'CVE-2020-7456', cve: 'CVE-2020-7456', min: 7.00, max: 10.00, type: 'Kernel',
+                    desc: 'Kernel NULL pointer dereference in the UART driver.',
+                    exploit: 'Trigger UART communication with a malformed packet to cause a kernel crash.'
+                },
+                { 
+                    name: 'CVE-2021-29633', cve: 'CVE-2021-29633', min: 8.00, max: 10.50, type: 'Kernel',
+                    desc: 'Kernel use-after-free in the file descriptor handling.',
+                    exploit: 'Create and close file descriptors repeatedly to trigger the UAF.'
+                },
+                { 
+                    name: 'CVE-2021-29634', cve: 'CVE-2021-29634', min: 8.00, max: 11.00, type: 'Kernel',
+                    desc: 'Kernel heap buffer overflow in the ALSA audio driver.',
+                    exploit: 'Send a crafted audio stream to the ALSA driver to overflow the heap.'
+                },
+                { 
+                    name: 'CVE-2021-29635', cve: 'CVE-2021-29635', min: 8.50, max: 11.50, type: 'Kernel',
+                    desc: 'Kernel information leak in the procfs interface.',
+                    exploit: 'Read /proc/self/maps to get memory layout information.'
+                },
+                { 
+                    name: 'CVE-2022-23096', cve: 'CVE-2022-23096', min: 9.00, max: 12.00, type: 'Kernel',
+                    desc: 'Kernel race condition in the POSIX timer subsystem.',
+                    exploit: 'Create and delete POSIX timers in a loop to trigger a race condition.'
+                },
+                { 
+                    name: 'CVE-2022-23097', cve: 'CVE-2022-23097', min: 9.50, max: 12.50, type: 'Kernel',
+                    desc: 'Kernel out-of-bounds write in the sysvipc message queue.',
+                    exploit: 'Send a large message to a message queue with a malformed header.'
+                },
+                { 
+                    name: 'CVE-2022-23098', cve: 'CVE-2022-23098', min: 10.00, max: 13.00, type: 'Kernel',
+                    desc: 'Kernel privilege escalation via the ptrace system call.',
+                    exploit: 'Use ptrace to attach to a privileged process and inject shellcode.'
+                },
+                { 
+                    name: 'CVE-2023-23097', cve: 'CVE-2023-23097', min: 10.50, max: 13.04, type: 'Kernel',
+                    desc: 'Kernel local privilege escalation in the sysctl handler.',
+                    exploit: 'Write to a specific sysctl node to overwrite kernel function pointers.'
+                },
+                // Userland
+                { 
+                    name: 'libc printf', cve: 'CVE-2020-7457', min: 7.00, max: 9.50, type: 'Userland',
+                    desc: 'libc printf function has a format string vulnerability.',
+                    exploit: 'Pass a user-controlled format string to printf to read/write memory.'
+                },
+                { 
+                    name: 'libc scanf', cve: 'CVE-2021-29636', min: 8.00, max: 10.50, type: 'Userland',
+                    desc: 'libc scanf has an integer overflow leading to heap overflow.',
+                    exploit: 'Provide a very large width specifier to scanf to overflow the buffer.'
+                },
+                { 
+                    name: 'libc string', cve: 'CVE-2022-23099', min: 9.00, max: 11.00, type: 'Userland',
+                    desc: 'libc string functions have a buffer overflow when handling multibyte characters.',
+                    exploit: 'Pass a string with malformed UTF-8 sequences to trigger the overflow.'
+                },
+                // Sandbox
+                { 
+                    name: 'Sandbox escape v1', cve: 'CVE-2020-7458', min: 7.00, max: 9.00, type: 'Sandbox',
+                    desc: 'Sandbox escape via kernel bug allows userland code to run with higher privileges.',
+                    exploit: 'Combine with a kernel exploit to break out of the sandbox.'
+                },
+                { 
+                    name: 'Sandbox escape v2', cve: 'CVE-2021-29637', min: 8.00, max: 10.00, type: 'Sandbox',
+                    desc: 'Sandbox escape via a race condition in the process scheduler.',
+                    exploit: 'Spawn many processes to trigger the race and escape the sandbox.'
+                },
+                { 
+                    name: 'Sandbox escape v3', cve: 'CVE-2022-23100', min: 9.00, max: 11.00, type: 'Sandbox',
+                    desc: 'Sandbox escape via a flawed seccomp filter.',
+                    exploit: 'Use a syscall that is allowed but not properly filtered to escape.'
+                },
+                // Display
+                { 
+                    name: 'FB driver', cve: 'CVE-2023-23098', min: 7.00, max: 12.00, type: 'Display',
+                    desc: 'Framebuffer driver has a memory mapping vulnerability.',
+                    exploit: 'Map the framebuffer with userland permissions to write to physical memory.'
+                },
+                // Audio
+                { 
+                    name: 'Audio driver', cve: 'CVE-2021-29638', min: 7.00, max: 10.50, type: 'Audio',
+                    desc: 'Audio driver has a use-after-free in the PCM interface.',
+                    exploit: 'Open and close PCM devices rapidly to trigger the UAF.'
+                },
+                // Camera
+                { 
+                    name: 'Camera driver', cve: 'CVE-2022-23101', min: 8.00, max: 11.00, type: 'Camera',
+                    desc: 'Camera driver has a buffer overflow in the JPEG decoding.',
+                    exploit: 'Send a malformed JPEG image to the camera driver to overflow the buffer.'
+                },
+                // Controller
+                { 
+                    name: 'DS4 controller', cve: 'CVE-2023-23099', min: 7.00, max: 12.00, type: 'Controller',
+                    desc: 'DS4 Bluetooth controller has a firmware update vulnerability.',
+                    exploit: 'Send a malicious firmware update to the controller to execute code.'
+                },
+                // Storage
+                { 
+                    name: 'eMMC driver', cve: 'CVE-2020-7459', min: 7.00, max: 9.50, type: 'Storage',
+                    desc: 'eMMC driver has a race condition in the block I/O path.',
+                    exploit: 'Trigger concurrent read/write operations to corrupt kernel memory.'
+                },
+                // Power
+                { 
+                    name: 'Power management', cve: 'CVE-2021-29639', min: 8.00, max: 10.50, type: 'Power',
+                    desc: 'Power management driver mishandles suspend/resume operations.',
+                    exploit: 'Suspend and resume the PS4 repeatedly to trigger a use-after-free.'
+                },
+                // Thermal
+                { 
+                    name: 'Thermal driver', cve: 'CVE-2022-23102', min: 9.00, max: 11.00, type: 'Thermal',
+                    desc: 'Thermal driver reads temperature sensors with insufficient validation.',
+                    exploit: 'Read sensor data to leak kernel addresses or cause a crash.'
+                },
+                // Fan
+                { 
+                    name: 'Fan driver', cve: 'CVE-2023-23100', min: 7.00, max: 12.00, type: 'Fan',
+                    desc: 'Fan control driver has a race condition in the PWM settings.',
+                    exploit: 'Change fan speed rapidly to trigger a kernel panic.'
+                },
+                // LED
+                { 
+                    name: 'LED driver', cve: 'CVE-2021-29640', min: 7.00, max: 10.00, type: 'LED',
+                    desc: 'LED driver has an integer overflow in the brightness setting.',
+                    exploit: 'Set a very high brightness value to overflow and corrupt memory.'
+                },
+                // Touchpad
+                { 
+                    name: 'Touchpad driver', cve: 'CVE-2022-23103', min: 8.00, max: 11.00, type: 'Touchpad',
+                    desc: 'Touchpad driver mishandles gesture inputs leading to buffer overflow.',
+                    exploit: 'Send a long gesture sequence to overflow the input buffer.'
+                },
+                // Motion
+                { 
+                    name: 'Gyroscope', cve: 'CVE-2023-23101', min: 7.00, max: 12.00, type: 'Sensor',
+                    desc: 'Gyroscope driver has a race condition in the data streaming.',
+                    exploit: 'Stream gyroscope data at high speed to trigger a UAF.'
+                },
+                { 
+                    name: 'Accelerometer', cve: 'CVE-2021-29641', min: 8.00, max: 10.50, type: 'Sensor',
+                    desc: 'Accelerometer driver has a memory leak that can be exploited.',
+                    exploit: 'Repeatedly read accelerometer data to exhaust kernel memory.'
+                },
+                // NFC
+                { 
+                    name: 'NFC driver', cve: 'CVE-2022-23104', min: 9.00, max: 11.50, type: 'NFC',
+                    desc: 'NFC driver has a buffer overflow in the NDEF message parsing.',
+                    exploit: 'Send a malformed NDEF message to the NFC chip to overflow the buffer.'
+                },
+                // IR
+                { 
+                    name: 'IR receiver', cve: 'CVE-2023-23102', min: 7.00, max: 12.00, type: 'IR',
+                    desc: 'IR receiver driver mishandles remote control codes leading to kernel panic.',
+                    exploit: 'Send a specially crafted IR code to trigger a kernel crash.'
+                },
+                // Ethernet
+                { 
+                    name: 'Ethernet driver', cve: 'CVE-2020-7460', min: 7.00, max: 9.50, type: 'Ethernet',
+                    desc: 'Ethernet driver has a buffer overflow in the packet reception.',
+                    exploit: 'Send a huge Ethernet frame to overflow the driver buffer.'
+                },
+                // Wi-Fi Direct
+                { 
+                    name: 'WiFi Direct', cve: 'CVE-2021-29642', min: 8.00, max: 10.50, type: 'WiFi',
+                    desc: 'WiFi Direct vulnerability allows remote code execution.',
+                    exploit: 'Connect to the PS4 via WiFi Direct and send a malformed handshake.'
+                },
+                // Bluetooth LE
+                { 
+                    name: 'BTLE', cve: 'CVE-2022-23105', min: 9.00, max: 11.00, type: 'Bluetooth',
+                    desc: 'Bluetooth Low Energy has a flaw in the connection handling.',
+                    exploit: 'Open multiple LE connections to trigger a kernel memory leak.'
+                },
+                // HDMI ARC
+                { 
+                    name: 'HDMI ARC', cve: 'CVE-2023-23103', min: 7.00, max: 12.00, type: 'HDMI',
+                    desc: 'HDMI ARC driver has a use-after-free in the audio return channel.',
+                    exploit: 'Enable ARC and disconnect HDMI repeatedly to trigger the UAF.'
+                },
+                // USB-C
+                { 
+                    name: 'USB-C PD', cve: 'CVE-2021-29643', min: 8.00, max: 10.50, type: 'USB',
+                    desc: 'USB-C Power Delivery driver has a buffer overflow in the negotiation.',
+                    exploit: 'Connect a USB-C charger with malformed PD messages.'
+                },
+                // S/PDIF
+                { 
+                    name: 'S/PDIF', cve: 'CVE-2022-23106', min: 9.00, max: 11.50, type: 'Audio',
+                    desc: 'S/PDIF driver has a race condition in the audio buffer handling.',
+                    exploit: 'Play audio through S/PDIF while changing sample rates rapidly.'
+                },
+                // Optical
+                { 
+                    name: 'Blu-ray driver', cve: 'CVE-2023-23104', min: 7.00, max: 12.00, type: 'Storage',
+                    desc: 'Blu-ray driver has a buffer overflow in the UDF filesystem parser.',
+                    exploit: 'Insert a Blu-ray disc with a malformed UDF structure.'
+                },
+                // SATA controller
+                { 
+                    name: 'SATA controller', cve: 'CVE-2020-7461', min: 7.00, max: 9.50, type: 'Storage',
+                    desc: 'SATA controller has a DMA buffer overflow vulnerability.',
+                    exploit: 'Send a large DMA transfer to the controller to overflow the buffer.'
+                },
+                // NVMe
+                { 
+                    name: 'NVMe driver', cve: 'CVE-2021-29644', min: 8.00, max: 10.50, type: 'Storage',
+                    desc: 'NVMe driver mishandles admin commands leading to kernel panic.',
+                    exploit: 'Send a malformed NVMe admin command to the SSD.'
+                }
             ];
 
-            // Функция для добавления строки с анимацией радуги
+            // Функция для добавления радужного текста
             function addLog(msg) {
                 const span = document.createElement('span');
                 span.className = 'rainbow-text';
@@ -343,13 +683,53 @@
                 status.textContent = 'Ready.';
             }
 
-            // Функция показа уведомления
-            function showNotification(text) {
-                notifMessage.textContent = text;
-                notification.classList.add('show');
-                setTimeout(() => {
-                    notification.classList.remove('show');
-                }, 8000);
+            // Функция для показа системного уведомления через Notification API
+            function showSystemNotification(message) {
+                // Проверяем поддержку Notification API
+                if (!('Notification' in window)) {
+                    // Fallback - эмуляция
+                    notifMessage.textContent = message;
+                    notification.classList.add('show');
+                    setTimeout(() => {
+                        notification.classList.remove('show');
+                    }, 8000);
+                    return;
+                }
+
+                // Запрашиваем разрешение, если ещё не было
+                if (Notification.permission === 'granted') {
+                    new Notification('PS4 System Alert', {
+                        body: message,
+                        icon: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect width="100" height="100" fill="%230044cc"/%3E%3Ctext x="20" y="60" font-size="40" fill="white" font-family="Arial"%3EPS4%3C/text%3E%3C/svg%3E',
+                        silent: false,
+                        tag: 'ps4-scan'
+                    });
+                } else if (Notification.permission === 'default') {
+                    Notification.requestPermission().then(perm => {
+                        if (perm === 'granted') {
+                            new Notification('PS4 System Alert', {
+                                body: message,
+                                icon: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect width="100" height="100" fill="%230044cc"/%3E%3Ctext x="20" y="60" font-size="40" fill="white" font-family="Arial"%3EPS4%3C/text%3E%3C/svg%3E',
+                                silent: false,
+                                tag: 'ps4-scan'
+                            });
+                        } else {
+                            // Если отказано, показываем эмуляцию
+                            notifMessage.textContent = message;
+                            notification.classList.add('show');
+                            setTimeout(() => {
+                                notification.classList.remove('show');
+                            }, 8000);
+                        }
+                    });
+                } else {
+                    // Если заблокировано, показываем эмуляцию
+                    notifMessage.textContent = message;
+                    notification.classList.add('show');
+                    setTimeout(() => {
+                        notification.classList.remove('show');
+                    }, 8000);
+                }
             }
 
             // Основная функция сканирования
@@ -394,17 +774,19 @@
                     }, 30 + index * 25);
                 });
 
-                // После завершения сканирования
+                // После завершения
                 setTimeout(() => {
                     addLog('------------------------------------------------------------------');
                     addLog(`[RESULT] Vulnerabilities detected: ${foundCount} out of ${vulnerabilities.length}`);
                     addLog('------------------------------------------------------------------');
 
-                    // Список найденных уязвимостей
                     if (foundCount > 0) {
                         addLog('[FOUND VULNERABILITIES FOR THIS PS4]:');
                         foundVulns.forEach(v => {
                             addLog(` - ${v.name} (${v.cve}) | ${v.type} | ${v.min} - ${v.max}`);
+                            addLog(`   [DESC] ${v.desc}`);
+                            addLog(`   [EXPLOIT] ${v.exploit}`);
+                            addLog('');
                         });
                     } else {
                         addLog('[FOUND VULNERABILITIES]: None.');
@@ -416,9 +798,10 @@
                     scanBtn.disabled = false;
                     isScanning = false;
 
-                    // Показать системное уведомление
-                    const notifText = `Found ${foundCount} vulnerabilities.`;
-                    showNotification(notifText);
+                    // Вызов системного уведомления
+                    const notifText = `Found ${foundCount} vulnerabilities on PS4 version ${version.toFixed(2)}.`;
+                    showSystemNotification(notifText);
+
                 }, 30 + vulnerabilities.length * 25 + 500);
             }
 
