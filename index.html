@@ -27,13 +27,14 @@
             border: 1px solid #333;
             padding: 20px;
             box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            position: relative;
         }
         #log {
             background: #0d0d0d;
             color: #fff;
             font-family: Arial, Helvetica, sans-serif;
-            font-size: 13px;
-            line-height: 1.5;
+            font-size: 14px;
+            line-height: 1.6;
             padding: 15px;
             border-radius: 4px;
             height: 450px;
@@ -52,6 +53,19 @@
         #log::-webkit-scrollbar-thumb {
             background: #0044cc;
             border-radius: 4px;
+        }
+        /* Анимация радуги для текста в логе */
+        @keyframes rainbow {
+            0% { color: #ff0000; }
+            16% { color: #ff8800; }
+            33% { color: #ffff00; }
+            50% { color: #00ff00; }
+            66% { color: #0088ff; }
+            83% { color: #8800ff; }
+            100% { color: #ff0000; }
+        }
+        .rainbow-text {
+            animation: rainbow 3s linear infinite;
         }
         .button-area {
             display: flex;
@@ -87,6 +101,39 @@
             margin-top: 10px;
             font-family: Arial, Helvetica, sans-serif;
         }
+        /* Стили для системного уведомления (имитация PS4) */
+        .ps4-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            border-left: 4px solid #0044cc;
+            color: #fff;
+            padding: 15px 25px;
+            border-radius: 4px;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.8);
+            z-index: 9999;
+            opacity: 0;
+            transform: translateX(50px);
+            transition: opacity 0.5s, transform 0.5s;
+            pointer-events: none;
+            max-width: 400px;
+        }
+        .ps4-notification.show {
+            opacity: 1;
+            transform: translateX(0);
+            pointer-events: auto;
+        }
+        .ps4-notification .title {
+            font-weight: bold;
+            color: #00ccff;
+            margin-bottom: 5px;
+        }
+        .ps4-notification .message {
+            color: #eee;
+        }
     </style>
 </head>
 <body>
@@ -98,15 +145,23 @@
         <div class="status" id="status">Press SCAN to check vulnerabilities.</div>
     </div>
 
+    <!-- Уведомление PS4 -->
+    <div class="ps4-notification" id="ps4Notification">
+        <div class="title">PS4 System Alert</div>
+        <div class="message" id="notifMessage">Found 0 vulnerabilities.</div>
+    </div>
+
     <script>
         (function() {
             const log = document.getElementById('log');
             const scanBtn = document.getElementById('scanBtn');
             const status = document.getElementById('status');
+            const notification = document.getElementById('ps4Notification');
+            const notifMessage = document.getElementById('notifMessage');
 
             let isScanning = false;
 
-            // Check if running on PS4 (strict detection)
+            // Проверка на PS4
             const ua = navigator.userAgent;
             const isPS4 = /ps4|playstation|sce|sony/i.test(ua);
 
@@ -118,14 +173,13 @@
                 return;
             }
 
-            // Extract PS4 version from User-Agent
+            // Определение версии PS4
             function getPS4Version() {
                 try {
                     const match = ua.match(/PS4\/(\d+\.\d+)/);
                     if (match) return parseFloat(match[1]);
-                    // Alternative: try to find version in other patterns
                     const altMatch = ua.match(/(\d+\.\d+)(?=\s*[;)]|$)/);
-                    if (altMatch && altMatch[1].startsWith('5.') || altMatch[1].startsWith('6.') || altMatch[1].startsWith('7.') || altMatch[1].startsWith('8.') || altMatch[1].startsWith('9.') || altMatch[1].startsWith('10.') || altMatch[1].startsWith('11.') || altMatch[1].startsWith('12.') || altMatch[1].startsWith('13.')) {
+                    if (altMatch && /^[5-9]|^1[0-3]/.test(altMatch[1])) {
                         return parseFloat(altMatch[1]);
                     }
                     return null;
@@ -137,9 +191,21 @@
             const version = getPS4Version();
             const versionDisplay = (version !== null) ? version.toFixed(2) : 'Unknown';
 
-            // Real vulnerabilities database (80+ entries)
+            // Определение модели PS4 (по возможности)
+            function getPS4Model() {
+                const uaLower = ua.toLowerCase();
+                if (uaLower.includes('pro')) return 'Pro';
+                if (uaLower.includes('slim')) return 'Slim';
+                // По размеру экрана или другим косвенным признакам (не надёжно)
+                if (window.screen && window.screen.width >= 3840) return 'Pro (4K)';
+                return 'Unknown';
+            }
+
+            const model = getPS4Model();
+
+            // База уязвимостей (80+)
             const vulnerabilities = [
-                // ---- Kernel exploits ----
+                // ---- Kernel ----
                 { name: 'Lapse', cve: 'CVE-2024-12345', min: 7.00, max: 13.04, type: 'Kernel' },
                 { name: 'Poopsploit', cve: 'N/A', min: 7.00, max: 13.00, type: 'Kernel' },
                 { name: 'Netctrl', cve: 'N/A', min: 7.00, max: 13.00, type: 'Kernel' },
@@ -151,7 +217,7 @@
                 { name: 'FreeBSD 13.0', cve: 'CVE-2022-23088', min: 9.00, max: 11.00, type: 'Kernel' },
                 { name: 'FreeBSD 13.1', cve: 'CVE-2022-23089', min: 9.50, max: 11.50, type: 'Kernel' },
                 { name: 'FreeBSD 13.2', cve: 'CVE-2023-23090', min: 10.00, max: 12.00, type: 'Kernel' },
-                // ---- WebKit / Browser ----
+                // ---- WebKit ----
                 { name: 'WebKit (CVE-2023-XXXX)', cve: 'CVE-2023-XXXX', min: 7.00, max: 12.02, type: 'Userland' },
                 { name: 'WebKit2 (CVE-2024-XXXX)', cve: 'CVE-2024-XXXX', min: 7.00, max: 13.02, type: 'Userland' },
                 { name: 'WebKit3', cve: 'CVE-2024-YYYY', min: 8.00, max: 13.00, type: 'Userland' },
@@ -162,16 +228,16 @@
                 { name: 'Mira', cve: 'N/A', min: 7.00, max: 13.00, type: 'Payload' },
                 { name: 'HENv2', cve: 'N/A', min: 7.00, max: 13.04, type: 'Payload' },
                 { name: 'HENv3', cve: 'N/A', min: 8.00, max: 13.00, type: 'Payload' },
-                // ---- Network stack ----
+                // ---- Network ----
                 { name: 'TCP/IPv6', cve: 'CVE-2020-7451', min: 7.00, max: 9.50, type: 'Network' },
                 { name: 'UDP hole', cve: 'CVE-2021-29627', min: 8.00, max: 10.50, type: 'Network' },
                 { name: 'DNS cache', cve: 'CVE-2022-23090', min: 9.00, max: 11.00, type: 'Network' },
                 { name: 'ARP spoof', cve: 'N/A', min: 7.00, max: 13.00, type: 'Network' },
-                // ---- File system ----
+                // ---- Filesystem ----
                 { name: 'FAT32 overflow', cve: 'CVE-2021-29628', min: 7.00, max: 10.00, type: 'Filesystem' },
                 { name: 'exFAT corruption', cve: 'CVE-2022-23091', min: 8.00, max: 11.00, type: 'Filesystem' },
                 { name: 'NTFS symbol', cve: 'CVE-2023-23092', min: 9.00, max: 12.00, type: 'Filesystem' },
-                // ---- Media / Audio ----
+                // ---- Media ----
                 { name: 'AVC decoder', cve: 'CVE-2021-29629', min: 7.00, max: 10.50, type: 'Media' },
                 { name: 'MP4 parser', cve: 'CVE-2022-23093', min: 8.00, max: 11.50, type: 'Media' },
                 { name: 'AAC heap', cve: 'CVE-2023-23094', min: 9.00, max: 12.50, type: 'Media' },
@@ -197,7 +263,7 @@
                 // ---- Memory ----
                 { name: 'kASLR bypass', cve: 'N/A', min: 7.00, max: 13.04, type: 'Memory' },
                 { name: 'heap spray', cve: 'N/A', min: 7.00, max: 13.00, type: 'Memory' },
-                // ---- Additional known vulnerabilities ----
+                // ---- Additional CVEs ----
                 { name: 'CVE-2020-7454', cve: 'CVE-2020-7454', min: 7.00, max: 9.00, type: 'Kernel' },
                 { name: 'CVE-2020-7455', cve: 'CVE-2020-7455', min: 7.00, max: 9.50, type: 'Kernel' },
                 { name: 'CVE-2020-7456', cve: 'CVE-2020-7456', min: 7.00, max: 10.00, type: 'Kernel' },
@@ -212,7 +278,7 @@
                 { name: 'libc printf', cve: 'CVE-2020-7457', min: 7.00, max: 9.50, type: 'Userland' },
                 { name: 'libc scanf', cve: 'CVE-2021-29636', min: 8.00, max: 10.50, type: 'Userland' },
                 { name: 'libc string', cve: 'CVE-2022-23099', min: 9.00, max: 11.00, type: 'Userland' },
-                // ---- Sandbox escapes ----
+                // ---- Sandbox ----
                 { name: 'Sandbox escape v1', cve: 'CVE-2020-7458', min: 7.00, max: 9.00, type: 'Sandbox' },
                 { name: 'Sandbox escape v2', cve: 'CVE-2021-29637', min: 8.00, max: 10.00, type: 'Sandbox' },
                 { name: 'Sandbox escape v3', cve: 'CVE-2022-23100', min: 9.00, max: 11.00, type: 'Sandbox' },
@@ -230,15 +296,14 @@
                 { name: 'Power management', cve: 'CVE-2021-29639', min: 8.00, max: 10.50, type: 'Power' },
                 // ---- Thermal ----
                 { name: 'Thermal driver', cve: 'CVE-2022-23102', min: 9.00, max: 11.00, type: 'Thermal' },
-                // ---- Fan control ----
+                // ---- Fan ----
                 { name: 'Fan driver', cve: 'CVE-2023-23100', min: 7.00, max: 12.00, type: 'Fan' },
                 // ---- LED ----
                 { name: 'LED driver', cve: 'CVE-2021-29640', min: 7.00, max: 10.00, type: 'LED' },
                 // ---- Touchpad ----
                 { name: 'Touchpad driver', cve: 'CVE-2022-23103', min: 8.00, max: 11.00, type: 'Touchpad' },
-                // ---- Motion sensor ----
+                // ---- Motion ----
                 { name: 'Gyroscope', cve: 'CVE-2023-23101', min: 7.00, max: 12.00, type: 'Sensor' },
-                // ---- Accelerometer ----
                 { name: 'Accelerometer', cve: 'CVE-2021-29641', min: 8.00, max: 10.50, type: 'Sensor' },
                 // ---- NFC ----
                 { name: 'NFC driver', cve: 'CVE-2022-23104', min: 9.00, max: 11.50, type: 'NFC' },
@@ -256,24 +321,18 @@
                 { name: 'USB-C PD', cve: 'CVE-2021-29643', min: 8.00, max: 10.50, type: 'USB' },
                 // ---- S/PDIF ----
                 { name: 'S/PDIF', cve: 'CVE-2022-23106', min: 9.00, max: 11.50, type: 'Audio' },
-                // ---- Optical drive ----
+                // ---- Optical ----
                 { name: 'Blu-ray driver', cve: 'CVE-2023-23104', min: 7.00, max: 12.00, type: 'Storage' },
-                // ---- Hard drive ----
+                // ---- SATA controller ----
                 { name: 'SATA controller', cve: 'CVE-2020-7461', min: 7.00, max: 9.50, type: 'Storage' },
-                // ---- SSD ----
+                // ---- NVMe ----
                 { name: 'NVMe driver', cve: 'CVE-2021-29644', min: 8.00, max: 10.50, type: 'Storage' }
             ];
 
-            function randomRGB() {
-                const r = Math.floor(Math.random() * 200 + 55);
-                const g = Math.floor(Math.random() * 200 + 55);
-                const b = Math.floor(Math.random() * 200 + 55);
-                return `rgb(${r}, ${g}, ${b})`;
-            }
-
+            // Функция для добавления строки с анимацией радуги
             function addLog(msg) {
                 const span = document.createElement('span');
-                span.style.color = randomRGB();
+                span.className = 'rainbow-text';
                 span.textContent = msg + '\n';
                 log.appendChild(span);
                 log.scrollTop = log.scrollHeight;
@@ -284,6 +343,16 @@
                 status.textContent = 'Ready.';
             }
 
+            // Функция показа уведомления
+            function showNotification(text) {
+                notifMessage.textContent = text;
+                notification.classList.add('show');
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                }, 8000);
+            }
+
+            // Основная функция сканирования
             function startScan() {
                 if (isScanning) return;
                 if (version === null) {
@@ -301,48 +370,63 @@
                 addLog('------------------------------------------------------------------');
 
                 const versionMsg = `PS4 VERSION - ${version.toFixed(2)}`;
-                const spanVer = document.createElement('span');
-                spanVer.style.color = randomRGB();
-                spanVer.textContent = `[+] ${versionMsg}\n`;
-                log.appendChild(spanVer);
-
+                const modelMsg = `MODEL - ${model}`;
+                addLog(`[+] ${versionMsg}`);
+                addLog(`[+] ${modelMsg}`);
                 addLog('------------------------------------------------------------------');
 
-                // Filter vulnerabilities based on version
                 let foundCount = 0;
-                const total = vulnerabilities.length;
+                const foundVulns = [];
 
-                addLog(`[INFO] Checking ${total} known vulnerabilities...`);
+                addLog(`[INFO] Checking ${vulnerabilities.length} known vulnerabilities...`);
 
                 vulnerabilities.forEach((vuln, index) => {
                     let vulnerable = false;
                     if (version >= vuln.min && version <= vuln.max) {
                         vulnerable = true;
                         foundCount++;
+                        foundVulns.push(vuln);
                     }
-
-                    let statusText = vulnerable ? 'VULNERABLE' : 'NOT VULNERABLE';
+                    const statusText = vulnerable ? 'VULNERABLE' : 'NOT VULNERABLE';
                     const line = `${vuln.name} [${vuln.cve}] ${vuln.min} - ${vuln.max} | ${vuln.type} | ${statusText}`;
                     setTimeout(() => {
                         addLog(line);
-                    }, 50 + index * 30); // быстрее, т.к. их 80
+                    }, 30 + index * 25);
                 });
 
+                // После завершения сканирования
                 setTimeout(() => {
                     addLog('------------------------------------------------------------------');
-                    addLog(`[RESULT] Vulnerabilities detected: ${foundCount} out of ${total}`);
+                    addLog(`[RESULT] Vulnerabilities detected: ${foundCount} out of ${vulnerabilities.length}`);
+                    addLog('------------------------------------------------------------------');
+
+                    // Список найденных уязвимостей
+                    if (foundCount > 0) {
+                        addLog('[FOUND VULNERABILITIES FOR THIS PS4]:');
+                        foundVulns.forEach(v => {
+                            addLog(` - ${v.name} (${v.cve}) | ${v.type} | ${v.min} - ${v.max}`);
+                        });
+                    } else {
+                        addLog('[FOUND VULNERABILITIES]: None.');
+                    }
+
+                    addLog('------------------------------------------------------------------');
                     addLog('[INFO] Scan completed.');
                     status.textContent = 'Scan complete.';
                     scanBtn.disabled = false;
                     isScanning = false;
-                }, 50 + total * 30 + 500);
+
+                    // Показать системное уведомление
+                    const notifText = `Found ${foundCount} vulnerabilities.`;
+                    showNotification(notifText);
+                }, 30 + vulnerabilities.length * 25 + 500);
             }
 
             scanBtn.addEventListener('click', startScan);
 
-            // Initial state
+            // Инициализация
             if (version !== null) {
-                addLog(`[INFO] PS4 version detected: ${version.toFixed(2)}. Ready.`);
+                addLog(`[INFO] PS4 version detected: ${version.toFixed(2)}. Model: ${model}. Ready.`);
                 status.textContent = 'Press SCAN to check vulnerabilities.';
             } else {
                 addLog('[ERROR] Could not detect PS4 version. Please restart the browser and try again.');
